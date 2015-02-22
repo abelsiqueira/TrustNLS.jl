@@ -1,5 +1,18 @@
 module TrustNLS
 
+function maxStepLen(x::Vector, d::Vector, l::Vector, u::Vector)
+  n = length(x)
+  gamma = Inf
+  for i = 1:n
+    if d[i] > 0 && u[i] < Inf
+      gamma = min(gamma, (u[i]-x[i])/d[i])
+    elseif d[i] < 0 && l[i] > -Inf
+      gamma = min(gamma, (l[i]-x[i])/d[i])
+    end
+  end
+  return gamma
+end
+
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     lower::Vector = [], upper::Vector = []; verbose::Bool = false)
   eps = 1e-4;
@@ -30,7 +43,6 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
   k = 0
   while k <= kmax
     verbose && println("|hx| = ", norm(hx))
-    k += 1
     v = A'*hx;
     D = ones(nvar);
     if has_bounds
@@ -42,50 +54,20 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
         end
       end
     end
-    if norm(v./D) < 1e-6
-      break
-    end
+    norm(v./D) < 1e-6 && break
     d = -v./(D.^2);
 
     alpha_cp = min(dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
     dcp = alpha_cp*d;
-    outside = false;
-    gamma = 1.0;
-    if has_bounds
-      for i = 1:nvar
-        if dcp[i] > 0 && upper[i] < Inf
-          gamma = min(gamma, (upper[i]-x[i])/dcp[i])
-          outside = true;
-        elseif dcp[i] < 0 && lower[i] > -Inf
-          gamma = min(gamma, (lower[i]-x[i])/dcp[i])
-          outside = true;
-        end
-      end
-    end
-    if outside
-      dcp = max(theta, 1-norm(dcp))*gamma*dcp;
-    end
+    has_bounds && (gamma = maxStepLen(x, dcp, lower, upper)) || (gamma = Inf)
+    gamma < Inf && (dcp = max(theta, 1-norm(dcp))*gamma*dcp)
 
+    # This is not exactly what we want.
+    # dn is an approximation to min |Ad+hx| s.t. |Dd| <= Delta
     dn = -A\hx;
-    if norm(D.*dn) > Delta
-      dn = (Delta/norm(D.*dn))*dn
-    end
-    outside = false;
-    gamma = 1.0
-    if has_bounds
-      for i = 1:nvar
-        if dn[i] > 0 && upper[i] < Inf
-          gamma = min(gamma, (upper[i]-x[i])/dn[i])
-          outside = true;
-        elseif dn[i] > 0 && lower[i] > -Inf
-          gamma = min(gamma, (lower[i]-x[i])/dn[i])
-          outside = true;
-        end
-      end
-    end
-    if outside
-      dn = max(theta, 1-norm(dn))*gamma*dn;
-    end
+    norm(D.*dn) > Delta && (dn = (Delta/norm(D.*dn))*dn)
+    has_bounds && (gamma = maxStepLen(x, dn, lower, upper)) || (gamma = Inf)
+    gamma < Inf && (dn = max(theta, 1-norm(dn))*gamma*dn)
 
     verbose && println("dcp = ",dcp)
     verbose && println("dn = ",dn)
@@ -114,10 +96,11 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
       Delta /= 4;
     end
 
+    k += 1
     verbose && println("---")
   end
 
-  return (x, k, hx, A)
+  return x, k, hx, A
 end
 
 end # module
