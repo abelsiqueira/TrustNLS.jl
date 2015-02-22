@@ -1,7 +1,7 @@
 module TrustNLS
 
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
-    verbose::Bool = false)
+    lower::Vector = [], upper::Vector = []; verbose::Bool = false)
   eps = 1e-4;
   nvar = length(x);
   theta = 0.9995;
@@ -9,6 +9,14 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
   beta1 = 0.1;
   beta2 = 0.25;
   kmax = 1000;
+
+  if (length(lower) > 0 || length(upper) > 0)
+    has_bounds = true
+    length(lower) == 0 && (lower = -Inf*ones(nvar))
+    length(upper) == 0 && (upper = Inf*ones(nvar))
+  else
+    has_bounds = false
+  end
 
   hx = Array(Cdouble, ncon)
   hdn_plus = Array(Cdouble, ncon)
@@ -20,34 +28,38 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
   verbose && println("h(x0) = ", hx)
   verbose && println("J(x0) = ", A)
   k = 0
-  while norm(A'*hx) > eps
+  while k <= kmax
     verbose && println("|hx| = ", norm(hx))
     k += 1
-    if k > kmax
-      break
-    end
     v = A'*hx;
     D = ones(nvar);
-    #for i = 1:nvar
-      #if v[i] < 0
-        #D[i] = 1.0/sqrt(Delta-x[i]);
-      #elseif v[i] > 0
-        #D[i] = 1.0/sqrt(x[i]+Delta);
-      #end
-    #end
+    if has_bounds
+      for i = 1:nvar
+        if v[i] < 0 && upper[i] < Inf
+          D[i] = 1.0/sqrt(upper[i]-x[i]);
+        elseif v[i] > 0 && lower[i] > -Inf
+          D[i] = 1.0/sqrt(x[i]-lower[i]);
+        end
+      end
+    end
+    if norm(v./D) < 1e-6
+      break
+    end
     d = -v./(D.^2);
 
     alpha_cp = min(dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
     dcp = alpha_cp*d;
     outside = false;
     gamma = 1.0;
-    for i = 1:nvar
-      if dcp[i] > 0
-        gamma = min(gamma, Delta/dcp[i]);
-        outside = true;
-      elseif dcp[i] < 0
-        gamma = min(gamma, -Delta/dcp[i]);
-        outside = true;
+    if has_bounds
+      for i = 1:nvar
+        if dcp[i] > 0 && upper[i] < Inf
+          gamma = min(gamma, (upper[i]-x[i])/dcp[i])
+          outside = true;
+        elseif dcp[i] < 0 && lower[i] > -Inf
+          gamma = min(gamma, (lower[i]-x[i])/dcp[i])
+          outside = true;
+        end
       end
     end
     if outside
@@ -60,13 +72,15 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     end
     outside = false;
     gamma = 1.0
-    for i = 1:nvar
-      if dn[i] > 0
-        gamma = min(gamma, Delta/dn[i]);
-        outside = true;
-      elseif dn[i] > 0
-        gamma = min(gamma, -Delta/dn[i]);
-        outside = true;
+    if has_bounds
+      for i = 1:nvar
+        if dn[i] > 0 && upper[i] < Inf
+          gamma = min(gamma, (upper[i]-x[i])/dn[i])
+          outside = true;
+        elseif dn[i] > 0 && lower[i] > -Inf
+          gamma = min(gamma, (lower[i]-x[i])/dn[i])
+          outside = true;
+        end
       end
     end
     if outside
