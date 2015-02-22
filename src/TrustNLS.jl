@@ -1,18 +1,24 @@
 module TrustNLS
 
-function solve(h::Function, J::Function, x::Array{Cdouble,1},
+function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     verbose::Bool = false)
   eps = 1e-4;
-  n = length(x);
+  nvar = length(x);
   theta = 0.9995;
   Delta = 1e3;
   beta1 = 0.1;
   beta2 = 0.25;
   kmax = 1000;
 
+  hx = Array(Cdouble, ncon)
+  hdn_plus = Array(Cdouble, ncon)
+  A = Array(Cdouble, ncon, nvar)
+  h!(x, hx);
+  J!(x, A);
+
   verbose && println("x0 = ", x)
-  hx = h(x);
-  A = J(x);
+  verbose && println("h(x0) = ", hx)
+  verbose && println("J(x0) = ", A)
   k = 0
   while norm(A*hx) > eps
     verbose && println("|hx| = ", norm(hx))
@@ -21,8 +27,8 @@ function solve(h::Function, J::Function, x::Array{Cdouble,1},
       break
     end
     v = A'*hx;
-    D = ones(n);
-    for i = 1:n
+    D = ones(nvar);
+    for i = 1:nvar
       if v[i] < 0
         D[i] = 1.0/sqrt(Delta-x[i]);
       elseif v[i] > 0
@@ -35,7 +41,7 @@ function solve(h::Function, J::Function, x::Array{Cdouble,1},
     dcp = alpha_cp*d;
     outside = false;
     gamma = 1.0;
-    for i = 1:n
+    for i = 1:nvar
       if dcp[i] > 0
         gamma = min(gamma, Delta/dcp[i]);
         outside = true;
@@ -54,7 +60,7 @@ function solve(h::Function, J::Function, x::Array{Cdouble,1},
     end
     outside = false;
     gamma = 1.0
-    for i = 1:n
+    for i = 1:nvar
       if dn[i] > 0
         gamma = min(gamma, Delta/dn[i]);
         outside = true;
@@ -81,14 +87,15 @@ function solve(h::Function, J::Function, x::Array{Cdouble,1},
       end
     end
     dn_plus = t*dn + (1-t)*dcp;
-    rho_h = (nh2-norm(h(x+dn_plus))^2)/(nh2-norm(hx+A*dn_plus)^2);
+    h!(x+dn_plus, hdn_plus)
+    rho_h = (nh2-norm(hdn_plus)^2)/(nh2-norm(hx+A*dn_plus)^2);
 
     if rho_h >= beta2
       x = x + dn_plus;
       verbose && println("x = ",x)
       Delta *= 2;
-      hx = h(x);
-      A = J(x);
+      h!(x, hx);
+      J!(x, A);
     else
       Delta /= 4;
     end
