@@ -59,15 +59,15 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
 
     alpha_cp = min(dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
     dcp = alpha_cp*d;
-    has_bounds && (gamma = maxStepLen(x, dcp, lower, upper)) || (gamma = Inf)
-    gamma < Inf && (dcp = max(theta, 1-norm(dcp))*gamma*dcp)
+    has_bounds ? (gamma = maxStepLen(x, dcp, lower, upper)) : (gamma = Inf)
+    gamma < 1.0 && (dcp = max(theta, 1-norm(dcp))*gamma*dcp)
 
     # This is not exactly what we want.
     # dn is an approximation to min |Ad+hx| s.t. |Dd| <= Delta
     dn = -A\hx;
     norm(D.*dn) > Delta && (dn = (Delta/norm(D.*dn))*dn)
-    has_bounds && (gamma = maxStepLen(x, dn, lower, upper)) || (gamma = Inf)
-    gamma < Inf && (dn = max(theta, 1-norm(dn))*gamma*dn)
+    has_bounds ? (gamma = maxStepLen(x, dn, lower, upper)) : (gamma = Inf)
+    gamma < 1.0 && (dn = max(theta, 1-norm(dn))*gamma*dn)
 
     verbose && println("dcp = ",dcp)
     verbose && println("dn = ",dn)
