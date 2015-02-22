@@ -20,7 +20,7 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
   verbose && println("h(x0) = ", hx)
   verbose && println("J(x0) = ", A)
   k = 0
-  while norm(A*hx) > eps
+  while norm(A'*hx) > eps
     verbose && println("|hx| = ", norm(hx))
     k += 1
     if k > kmax
@@ -28,13 +28,13 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     end
     v = A'*hx;
     D = ones(nvar);
-    for i = 1:nvar
-      if v[i] < 0
-        D[i] = 1.0/sqrt(Delta-x[i]);
-      elseif v[i] > 0
-        D[i] = 1.0/sqrt(x[i]+Delta);
-      end
-    end
+    #for i = 1:nvar
+      #if v[i] < 0
+        #D[i] = 1.0/sqrt(Delta-x[i]);
+      #elseif v[i] > 0
+        #D[i] = 1.0/sqrt(x[i]+Delta);
+      #end
+    #end
     d = -v./(D.^2);
 
     alpha_cp = min(dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
@@ -103,7 +103,7 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     verbose && println("---")
   end
 
-  return x
+  return (x, k, hx, A)
 end
 
 end # module
