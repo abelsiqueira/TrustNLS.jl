@@ -14,14 +14,14 @@ function maxStepLen(x::Vector, d::Vector, l::Vector, u::Vector)
 end
 
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
-    lower::Vector = [], upper::Vector = []; verbose::Bool = false)
+    lower::Vector = [], upper::Vector = [];
+    verbose::Bool = false, kmax::Int = 1000)
   eps = 1e-4;
   nvar = length(x);
   theta = 0.9995;
   Delta = 1e3;
   beta1 = 0.1;
   beta2 = 0.25;
-  kmax = 1000;
 
   if (length(lower) > 0 || length(upper) > 0)
     has_bounds = true
@@ -57,10 +57,11 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     norm(v./D) < 1e-6 && break
     d = -v./(D.^2);
 
-    alpha_cp = min(dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
+    alpha_cp = min(-dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
     dcp = alpha_cp*d;
     has_bounds ? (gamma = maxStepLen(x, dcp, lower, upper)) : (gamma = Inf)
     gamma < 1.0 && (dcp = max(theta, 1-norm(dcp))*gamma*dcp)
+    verbose && println("dcp = ", dcp)
 
     # This is not exactly what we want.
     # dn is an approximation to min |Ad+hx| s.t. |Dd| <= Delta
@@ -69,13 +70,12 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     has_bounds ? (gamma = maxStepLen(x, dn, lower, upper)) : (gamma = Inf)
     gamma < 1.0 && (dn = max(theta, 1-norm(dn))*gamma*dn)
 
-    verbose && println("dcp = ",dcp)
     verbose && println("dn = ",dn)
     nh2 = norm(hx)^2;
     nhdcp2 = norm(hx + A*dcp)^2;
     rho_C(delta) = (nh2 - norm(hx+A*delta)^2)/(nh2 - nhdcp2);
     t = 1.0;
-    while rho_C(t*dn+(1-t)*dcp) >= beta1
+    while rho_C(t*dn+(1-t)*dcp) < beta1
       t = 0.9*t;
       if (t < 1e-6)
         verbose && println("Warning")
