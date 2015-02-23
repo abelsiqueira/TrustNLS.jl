@@ -6,7 +6,7 @@ function J!(x::Vector, J::Matrix)
   return copy!(J, [1 0; -20*x[1] 10])
 end
 
-l = [-Inf;-Inf]
+l = [-Inf;0.5]
 u = [0.5;Inf]
 
 (x, k, hx, A) = TrustNLS.solve(2, h!, J!, [0.0;0.5], l, u)
