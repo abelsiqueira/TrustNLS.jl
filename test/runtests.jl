@@ -21,3 +21,4 @@ include("small/test_lin_exact.jl")
 include("small/test_lin_rand.jl")
 
 include("small/test_bnd.jl")
+include("small/test_lin_bnd.jl")

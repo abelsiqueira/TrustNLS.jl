@@ -15,7 +15,7 @@ end
 
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     lower::Vector = [], upper::Vector = [];
-    verbose::Bool = false, kmax::Int = 1000)
+    verbose::Bool = false, kmax::Int = 10000)
   eps = 1e-4;
   nvar = length(x);
   theta = 0.9995;
