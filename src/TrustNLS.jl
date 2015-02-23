@@ -16,7 +16,7 @@ end
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     lower::Vector = [], upper::Vector = [];
     verbose::Bool = false, kmax::Int = 10000)
-  eps = 1e-4;
+  eps = 1e-6;
   nvar = length(x);
   theta = 0.9995;
   Delta = 1e3;
@@ -54,7 +54,7 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
         end
       end
     end
-    norm(v./D) < 1e-6 && break
+    norm(v./D) < eps && break
     d = -v./(D.^2);
 
     alpha_cp = min(-dot(v,d)/norm(A*d)^2, Delta/norm(D.*d));
@@ -77,10 +77,6 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     t = 1.0;
     while rho_C(t*dn+(1-t)*dcp) < beta1
       t = 0.9*t;
-      if (t < 1e-6)
-        verbose && println("Warning")
-        break
-      end
     end
     dn_plus = t*dn + (1-t)*dcp;
     h!(x+dn_plus, hdn_plus)
