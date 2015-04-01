@@ -15,7 +15,7 @@ end
 
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     lower::Vector = [], upper::Vector = [];
-    verbose::Bool = false, kmax::Int = 10000)
+    verbose::Bool = false, kmax::Int = 10000, normheps = 0.0)
   eps = 1e-6;
   nvar = length(x);
   theta = 0.9995;
@@ -41,7 +41,7 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
   verbose && println("h(x0) = ", hx)
   verbose && println("J(x0) = ", A)
   k = 0
-  while k <= kmax
+  while k <= kmax && norm(hx) > normheps
     verbose && println("|hx| = ", norm(hx))
     v = A'*hx;
     D = ones(nvar);
