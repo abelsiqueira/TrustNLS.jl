@@ -18,21 +18,21 @@ if nlp.meta.ncon == 0
 end
 
 function h!(x::Vector, h::Vector)
-  st = [int32(0)]
-  nnzj = [int32(0)]
-  CUTEst.ccfsg(st, [int32(nlp.meta.nvar)], [int32(nlp.meta.ncon)], x, h, nnzj,
-      [int32(nlp.meta.nnzj)], [0.0], [int32(0)], [int32(0)], [int32(0)], nlp.libname)
+  st = Int32[0]
+  nnzj = Int32[0]
+  CUTEst.ccfsg(st, Int32[nlp.meta.nvar], Int32[nlp.meta.ncon], x, h, nnzj,
+      Int32[nlp.meta.nnzj], [0.0], Int32[0], Int32[0], Int32[0], nlp.libname)
 end
 
 function J!(x::Vector, J::Matrix)
-  st = [int32(0)]
-  nnzj = [int32(0)]
+  st = Int32[0]
+  nnzj = Int32[0]
   h = Array(Cdouble, nlp.meta.ncon)
   jval = Array(Cdouble, nlp.meta.nnzj)
   jvar = Array(Cint, nlp.meta.nnzj)
   jfun = Array(Cint, nlp.meta.nnzj)
-  CUTEst.ccfsg(st, [int32(nlp.meta.nvar)], [int32(nlp.meta.ncon)], x, h, nnzj,
-      [int32(nlp.meta.nnzj)], jval, jvar, jfun, [int32(1)], nlp.libname)
+  CUTEst.ccfsg(st, Int32[nlp.meta.nvar], Int32[nlp.meta.ncon], x, h, nnzj,
+      Int32[nlp.meta.nnzj], jval, jvar, jfun, Int32[1], nlp.libname)
   for i = 1:nlp.meta.ncon
     for j = 1:nlp.meta.nvar
       J[i,j] = 0.0
