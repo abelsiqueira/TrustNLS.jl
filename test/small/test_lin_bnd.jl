@@ -20,7 +20,7 @@ for nvar = 2:10
     t = rand(nvar)
     x0 = t.*l+(1-t).*u;
     (x, k, hx, A) = TrustNLS.solve(ncon, h!, J!, x0, l, u)
-    @test all([l[i] <= x[i] <= u[i] for i = 1:nvar])
+    @test reduce(&, [l[i] <= x[i] <= u[i] for i = 1:nvar])
     tests += 1
     norm(bnd_scaling(A'*hx, x, l, u)) < 1e-6 && (succ += 1)
   end

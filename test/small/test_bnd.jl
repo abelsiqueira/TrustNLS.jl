@@ -11,4 +11,4 @@ u = [0.5;Inf]
 
 (x, k, hx, A) = TrustNLS.solve(2, h!, J!, [0.0;0.5], l, u)
 @test norm(bnd_scaling(A'*hx, x, l, u)) < 1e-4
-@test all([l[i] <= x[i] <= u[i] for i = 1:2])
+@test reduce(&, [l[i] <= x[i] <= u[i] for i = 1:2])

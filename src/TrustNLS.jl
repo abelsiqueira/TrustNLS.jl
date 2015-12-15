@@ -15,7 +15,8 @@ end
 
 function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     lower::Vector = [], upper::Vector = [];
-    verbose::Bool = false, kmax::Int = 10000, normheps = 0.0)
+    verbose::Bool = false, kmax::Int = 10000, normheps = 0.0,
+    inplace = true)
   eps = 1e-6;
   nvar = length(x);
   theta = 0.9995;
@@ -31,11 +32,16 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
     has_bounds = false
   end
 
-  hx = Array(Cdouble, ncon)
-  hdn_plus = Array(Cdouble, ncon)
-  A = Array(Cdouble, ncon, nvar)
-  h!(x, hx);
-  J!(x, A);
+  if inplace
+    hx = Array(Cdouble, ncon)
+    hdn_plus = Array(Cdouble, ncon)
+    A = Array(Cdouble, ncon, nvar)
+    h!(x, hx);
+    J!(x, A);
+  else
+    hx = h!(x)
+    A = J!(x)
+  end
 
   verbose && println("x0 = ", x)
   verbose && println("h(x0) = ", hx)
@@ -79,15 +85,24 @@ function solve(ncon::Int, h!::Function, J!::Function, x::Array{Cdouble,1},
       t = 0.9*t;
     end
     dn_plus = t*dn + (1-t)*dcp;
-    h!(x+dn_plus, hdn_plus)
+    if inplace
+      h!(x+dn_plus, hdn_plus)
+    else
+      hdn_plus = h!(x+dn_plus)
+    end
     rho_h = (nh2-norm(hdn_plus)^2)/(nh2-norm(hx+A*dn_plus)^2);
 
     if rho_h >= beta2
       x = x + dn_plus;
       verbose && println("x = ",x)
       Delta *= 2;
-      h!(x, hx);
-      J!(x, A);
+      if inplace
+        h!(x, hx);
+        J!(x, A);
+      else
+        hx = h!(x)
+        A = J!(x)
+      end
     else
       Delta /= 4;
     end
